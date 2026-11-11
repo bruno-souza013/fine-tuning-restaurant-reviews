@@ -9,7 +9,7 @@ df = df[["text_pt", "rating"]].dropna()
 df["text_pt"] = df["text_pt"].str.strip()
 
 df = df[df["text_pt"] != ""]
-df = df.drop_duplicates(subset="text_pt")
+
 
 def create_label(rating):
     if rating <= 2.0:
@@ -18,14 +18,17 @@ def create_label(rating):
         return "neutral"
     return "positive"
 
+
 df["label"] = df["rating"].apply(create_label)
 
-print("Total de exemplos:", len(df))
-print("\nDistribuição das classes:")
-print(df["label"].value_counts())
+rotulos_por_texto = df.groupby("text_pt")["label"].nunique()
+textos_conflitantes = rotulos_por_texto[rotulos_por_texto > 1].index
 
-print("\nExemplos:")
-print(df[["text_pt", "rating", "label"]].head(10).to_string())
+print("Grupos com rótulos conflitantes:", len(textos_conflitantes))
+
+df = df[~df["text_pt"].isin(textos_conflitantes)]
+
+df = df.drop_duplicates(subset="text_pt")
 
 #======== balanceamento do dataset por label
 amostra = (

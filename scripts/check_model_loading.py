@@ -1,4 +1,4 @@
-#verifica se o modelo pode ser carregadoem 4bitsimport torch
+#verifica se o modelo pode ser carregado em 4bits
 import torch
 from transformers import AutoModelForCausalLM, BitsAndBytesConfig
 

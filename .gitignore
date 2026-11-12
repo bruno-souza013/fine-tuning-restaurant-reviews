@@ -10,3 +10,6 @@ checkpoints/
 .cache/
 .env
 *.log
+qlora-restaurant-reviews/
+*.safetensors
+__huggingface_repos__.json

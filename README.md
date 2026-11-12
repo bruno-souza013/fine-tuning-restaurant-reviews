@@ -1,109 +1,56 @@
-# Fine-tuning de avaliações de restaurantes com QLoRA
+# Restaurant Review QLoRA
 
-Projeto de estudo de classificação de sentimento em avaliações de
-restaurantes escritas em português. O modelo recebe uma avaliação e retorna
-uma das três classes:
+Fine-tuning do [`Qwen/Qwen2.5-1.5B-Instruct`](https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct)
+para classificar avaliações de restaurantes em português:
 
-- `negative`
-- `neutral`
-- `positive`
+```text
+negative · neutral · positive
+```
 
-O modelo base utilizado é o
-[Qwen/Qwen2.5-1.5B-Instruct](https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct).
+## Resultado
 
-## Objetivos
+Avaliação em 1.500 exemplos balanceados:
 
-- preparar e auditar um dataset de avaliações;
-- evitar vazamento entre treino, validação e teste;
-- medir o comportamento do modelo base;
-- treinar um adapter LoRA usando quantização 4-bit;
-- comparar o modelo ajustado com o baseline nas mesmas condições.
+| Modelo | Accuracy | F1 macro |
+|---|---:|---:|
+| Qwen base | 67,53% | ~0,59 |
+| Qwen + QLoRA | **81,20%** | **0,81** |
+
+O adapter QLoRA melhorou a accuracy em **13,67 pontos percentuais**. A classe
+mais difícil continua sendo `neutral` (F1 `0,72`).
+
+<details>
+<summary>Ver métricas por classe</summary>
+
+| Classe | Precision | Recall | F1 |
+|---|---:|---:|---:|
+| `negative` | 0,86 | 0,89 | 0,87 |
+| `neutral` | 0,72 | 0,73 | 0,72 |
+| `positive` | 0,86 | 0,82 | 0,84 |
+
+</details>
 
 ## Dataset
 
-O projeto utiliza o
-[PT-EN Zomato dataset](https://data.mendeley.com/datasets/448d7kts3k/1),
-disponibilizado no Mendeley Data:
+Fonte: [PT-EN Zomato dataset](https://data.mendeley.com/datasets/448d7kts3k/1).
 
 > Silva, Marcos; De Olival, Daniel; Branco, Alexandre; Mendonça, Fábio;
 > Mostafa, Sheikh Shanawaz; Morgado-Dias, Fernando (2024), “PT-EN Zomato
 > dataset”, Mendeley Data, V1, doi:
 > [10.17632/448d7kts3k.1](https://doi.org/10.17632/448d7kts3k.1).
 
-O dataset original possui textos, notas e metadados. O pipeline utiliza:
-
-- `text_translation_pt` como texto principal;
-- `text` como fallback quando a tradução não está disponível;
-- `rating` para derivar o rótulo.
+Os rótulos foram derivados de `rating`:
 
 | Nota | Rótulo |
 |---|---|
-| 1.0 a 2.0 | `negative` |
-| 2.5 a 3.5 | `neutral` |
-| 4.0 a 5.0 | `positive` |
+| 1,0–2,0 | `negative` |
+| 2,5–3,5 | `neutral` |
+| 4,0–5,0 | `positive` |
 
-### Privacidade e versionamento dos dados
+O dataset original e os CSVs não são versionados. Mantenha-os localmente ou
+em um dataset privado do Kaggle e verifique a licença antes de redistribuí-los.
 
-Os CSVs não são publicados neste repositório. Eles podem conter informações
-potencialmente identificáveis e devem permanecer no ambiente local ou em um
-dataset privado do Kaggle. O arquivo `data/creditos.txt` registra a origem do
-dataset.
-
-## Auditoria e preparação
-
-O dataset bruto possui 1.192.173 registros. Após o tratamento:
-
-- foram considerados 539.300 textos válidos;
-- valores ausentes e textos vazios foram removidos;
-- textos foram deduplicados;
-- 2 grupos de textos com rótulos conflitantes foram removidos
-  completamente;
-- foi criada uma amostra balanceada com 5.000 exemplos por classe;
-- a divisão final possui 12.000 exemplos de treino, 1.500 de validação e
-  1.500 de teste;
-- a divisão foi estratificada usando seed `13`;
-- não foi encontrada sobreposição textual entre os três conjuntos após
-  normalização de espaços, caixa e Unicode.
-
-O conjunto de teste permaneceu reservado para a avaliação final.
-
-## Estrutura do projeto
-
-```text
-qlora/
-├── data/
-│   └── creditos.txt
-├── scripts/
-│   ├── check_format.py
-│   ├── check_model_loading.py
-│   ├── evaluate_baseline.py
-│   └── explore_dataset.py
-├── src/
-│   ├── prepare_dataset.py
-│   └── treinar_qlora.py
-├── .gitignore
-├── README.md
-└── requirements.txt
-```
-
-Os arquivos `data/*.csv`, ambientes virtuais, checkpoints e saídas de
-treinamento são ignorados pelo Git.
-
-## Ambiente
-
-O desenvolvimento local foi validado com:
-
-- Python 3.12;
-- PyTorch com CUDA;
-- GPU NVIDIA RTX 4060 com 8 GB de VRAM.
-
-O treinamento também foi preparado para execução em GPU no Kaggle. Nesse
-caso, `train.csv` e `validation.csv` podem ser enviados como um dataset
-privado. O `test.csv` deve permanecer reservado até a avaliação final.
-
-## Instalação
-
-Crie e ative um ambiente virtual e instale as dependências:
+## Comece aqui
 
 ```powershell
 python -m venv .venv312
@@ -111,137 +58,56 @@ python -m venv .venv312
 python -m pip install -r requirements.txt
 ```
 
-O PyTorch pode exigir uma instalação específica para a versão CUDA da
-máquina. Evite substituir uma instalação CUDA funcional sem necessidade.
-
-## Execução
-
-### Preparar os dados
-
-Coloque o dataset original em `data/dataset.csv` e execute:
+Pipeline:
 
 ```powershell
-python src/prepare_dataset.py
+python pipeline.py
 ```
 
-Esse comando gera localmente:
+No menu, escolha a etapa desejada. O treinamento oferece primeiro um smoke
+test curto para validar a configuração. Para treinar no Kaggle, envie o código
+para o GitHub e use `train.csv` e `validation.csv` como dataset privado.
+Preserve `test.csv` para a avaliação final.
 
-- `data/dataset_classificacao.csv`;
-- `data/train.csv`;
-- `data/validation.csv`;
-- `data/test.csv`.
-
-### Verificar o formato conversacional
-
-```powershell
-python scripts/check_format.py
-```
-
-O script aplica o template de conversa do tokenizer e verifica a estrutura
-usada no treinamento.
-
-### Verificar o carregamento quantizado
-
-```powershell
-python scripts/check_model_loading.py
-```
-
-Esse teste carrega o modelo em 4-bit com NF4 e confirma o uso da GPU.
-
-### Executar o baseline
-
-```powershell
-python scripts/evaluate_baseline.py
-```
-
-O baseline usa o modelo original, sem fine-tuning, e avalia o conjunto de
-teste completo. O script calcula accuracy, precision, recall, F1 por classe e
-gera a matriz de confusão em:
+## Estrutura
 
 ```text
-outputs/baseline_confusion_matrix.png
+├── pipeline.py  # menu principal
+├── data/       # créditos; CSVs locais ignorados pelo Git
+├── src/        # preparação dos dados e treinamento
+├── scripts/    # checagens, avaliação e inferência
+├── outputs/    # resultados locais ignorados pelo Git
+└── README.md
 ```
 
-Respostas que não correspondem exatamente a `negative`, `neutral` ou
-`positive` são registradas como `invalid` e contabilizadas separadamente.
+<details>
+<summary>Configuração do experimento</summary>
 
-### Treinar o adapter QLoRA
-
-O script [`src/treinar_qlora.py`](src/treinar_qlora.py) oferece um smoke test
-e o treinamento completo:
-
-```powershell
-python src/treinar_qlora.py --smoke-test
-```
-
-O smoke test usa até 100 exemplos de treino, 20 de validação e 5 passos.
-Depois de validar a configuração:
-
-```powershell
-python src/treinar_qlora.py
-```
-
-O treinamento completo usa uma época, batch size 1, acumulação de gradiente
-4, comprimento máximo de 512 tokens e learning rate `2e-4`. O adapter e o
-tokenizer são salvos em:
-
-```text
-outputs/qlora-restaurant-reviews/
-```
-
-Em uma sessão Kaggle, adapte os caminhos para `/kaggle/input` e salve os
-artefatos em `/kaggle/working`.
-
-## Configuração QLoRA
-
-O experimento utiliza:
-
-- quantização 4-bit NF4;
-- double quantization;
+- QLoRA com quantização 4-bit NF4 e double quantization;
 - compute dtype `float16`;
-- LoRA com `r=16`;
-- `lora_alpha=32`;
-- dropout `0.05`;
-- target modules de atenção e MLP;
+- LoRA `r=16`, `alpha=32`, dropout `0,05`;
+- 15.000 exemplos balanceados;
+- 12.000 treino, 1.500 validação e 1.500 teste;
+- 1 época, comprimento máximo de 512 tokens;
 - seed `13`;
-- modelo base congelado, treinando apenas os parâmetros do adapter.
+- GPU usada no desenvolvimento: NVIDIA RTX 4060 com 8 GB.
 
-No smoke test validado, 18.464.768 de 1.562.179.072 parâmetros foram
-treináveis, aproximadamente 1,18% do modelo.
+</details>
 
-## Baseline registrado
+<details>
+<summary>Limitações</summary>
 
-O modelo base foi avaliado em 1.500 exemplos:
+- os rótulos são aproximações baseadas na nota, não anotações manuais;
+- traduções podem introduzir ruído;
+- a amostra balanceada não representa a distribuição original;
+- `neutral` é semanticamente ambígua e concentra mais erros;
+- o adapter e os dados permanecem fora deste repositório.
 
-- accuracy: `0,6753`;
-- F1 macro: aproximadamente `0,59`;
-- F1 de `negative`: `0,81`;
-- F1 de `neutral`: `0,18`;
-- F1 de `positive`: `0,78`.
+</details>
 
-O principal problema observado foi a classe `neutral`, frequentemente
-confundida com `negative` ou `positive`. O resultado do modelo ajustado ainda
-precisa ser medido no mesmo `test.csv` antes de qualquer conclusão sobre
-melhoria.
+## Relatórios locais
 
-## Limitações
+Os detalhes completos ficam nos arquivos gerados localmente:
 
-- os rótulos são derivados da nota, que é uma aproximação do sentimento do
-  texto;
-- a tradução automática pode introduzir ruído;
-- a amostra balanceada não representa a distribuição original das notas;
-- duplicatas aproximadas e agrupamentos por usuário ou restaurante não foram
-  usados como critério adicional de divisão;
-- respostas generativas inválidas podem ocorrer no baseline;
-- uma única configuração de modelo e LoRA não permite generalizar o
-  resultado para outras configurações.
-
-## Próximos passos
-
-1. concluir ou confirmar o treinamento completo do adapter;
-2. avaliar o modelo ajustado no `test.csv`;
-3. gerar a matriz de confusão e métricas do modelo ajustado;
-4. comparar baseline e fine-tuned nas mesmas condições;
-5. analisar exemplos de erro;
-6. registrar hardware, tempo e resultados reais;
-7. adicionar inferência com o adapter e atualizar esta documentação.
+- `outputs/result.md` — modelo base;
+- `qlora-restaurant-reviews/result.md` — modelo após QLoRA.

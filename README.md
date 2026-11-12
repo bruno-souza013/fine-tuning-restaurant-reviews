@@ -7,6 +7,8 @@ para classificar avaliações de restaurantes em português:
 negative · neutral · positive
 ```
 
+[Testar o avaliador online no Hugging Face Spaces](https://huggingface.co/spaces/brunoSouza013/restaurant-review-qlora)
+
 ## Resultado
 
 Avaliação em 1.500 exemplos balanceados:
@@ -101,7 +103,10 @@ Preserve `test.csv` para a avaliação final.
 - traduções podem introduzir ruído;
 - a amostra balanceada não representa a distribuição original;
 - `neutral` é semanticamente ambígua e concentra mais erros;
-- o adapter e os dados permanecem fora deste repositório.
+- o adapter e os dados permanecem fora deste repositório;
+- a interface usa um guardrail com o próprio modelo para filtrar textos fora
+  do domínio antes da classificação, o que adiciona uma segunda geração por
+  consulta e pode produzir falsos positivos ou falsos negativos.
 
 </details>
 

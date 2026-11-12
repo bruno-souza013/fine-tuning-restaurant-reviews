@@ -7,7 +7,11 @@ para classificar avaliações de restaurantes em português:
 negative · neutral · positive
 ```
 
-[Testar o avaliador online no Hugging Face Spaces](https://huggingface.co/spaces/brunoSouza013/restaurant-review-qlora)
+<p align="center">
+  <a href="https://huggingface.co/spaces/brunoSouza013/fine-tuning-restaurant-reviews">
+    <img src="https://img.shields.io/badge/_TESTAR_AVALIADOR_ONLINE-Hugging_Face-yellow?style=for-the-badge&logo=huggingface" />
+  </a>
+</p>
 
 ## Resultado
 

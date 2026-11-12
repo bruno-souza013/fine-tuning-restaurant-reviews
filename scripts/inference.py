@@ -1,5 +1,6 @@
 import torch
 from peft import PeftModel
+from pathlib import Path
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -7,7 +8,8 @@ from transformers import (
 )
 
 BASE_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"
-ADAPTER = r"C:\Users\Meu Computador\Desktop\qlora\qlora-restaurant-reviews"
+ROOT = Path(__file__).resolve().parent.parent
+ADAPTER = ROOT / "qlora-restaurant-reviews"
 
 tokenizer = AutoTokenizer.from_pretrained(ADAPTER)
 
